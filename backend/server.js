@@ -1,7 +1,11 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const db = require("./db");
+const jwt = require("jsonwebtoken");
+
 
 const app = express();
 
@@ -260,17 +264,30 @@ app.post("/api/login", (req, res) => {
       });
     }
 
-    res.json({
-      message: "Login successful",
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      }
+    const token = jwt.sign(
+  {
+    id: user.id,
+    email: user.email,
+    role: user.role
+  },
+  process.env.JWT_SECRET,
+  {
+    expiresIn: "1h"
+  }
+);
+
+res.json({
+  message: "Login successful",
+  token,
+  user: {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role
+  }
+});
     });
   });
-});
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

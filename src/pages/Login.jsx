@@ -44,8 +44,7 @@ function Login() {
         throw new Error(data.message || "Login failed");
       }
 
-      login(data.user);
-
+      login(data.user, data.token);
       setMessage(`Welcome, ${data.user.name}!`);
     } catch (error) {
       console.error(error);

@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 function CreatePost({ onAddPost }) {
+  const { user } = useAuth();
+
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -12,34 +15,44 @@ function CreatePost({ onAddPost }) {
       return;
     }
 
+    if (!user) {
+      setError("Please login before creating a post.");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
-      const response = await fetch("http://localhost:5001/api/posts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          author: "Lalit Singh Malik",
-          role: "Frontend Developer",
-          content: content
-        })
-      });
+      const response = await fetch(
+        "http://localhost:5001/api/posts",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            author: user.name,
+            role: user.role,
+            content: content
+          })
+        }
+      );
+
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error("Failed to create post");
+        throw new Error(
+          data.message || "Failed to create post"
+        );
       }
 
-      const newPost = await response.json();
-
-      onAddPost(newPost);
+      onAddPost(data);
 
       setContent("");
     } catch (error) {
       console.error(error);
-      setError("Unable to create post.");
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -59,7 +72,11 @@ function CreatePost({ onAddPost }) {
         {loading ? "Creating..." : "Create Post"}
       </button>
 
-      {error && <p className="error">{error}</p>}
+      {error && (
+        <p className="error">
+          {error}
+        </p>
+      )}
     </form>
   );
 }

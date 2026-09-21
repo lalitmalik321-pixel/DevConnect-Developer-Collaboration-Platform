@@ -11,24 +11,38 @@ export function AuthProvider({ children }) {
       : null;
   });
 
-  const login = (userData) => {
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem("devconnect_token");
+  });
+
+  const login = (userData, authToken) => {
     setUser(userData);
+    setToken(authToken);
 
     localStorage.setItem(
       "devconnect_user",
       JSON.stringify(userData)
     );
+
+    localStorage.setItem(
+      "devconnect_token",
+      authToken
+    );
   };
 
   const logout = () => {
     setUser(null);
+    setToken(null);
+
     localStorage.removeItem("devconnect_user");
+    localStorage.removeItem("devconnect_token");
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        token,
         login,
         logout
       }}
