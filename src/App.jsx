@@ -6,6 +6,7 @@ import Developers from "./pages/Developers";
 import Profile from "./pages/Profile";
 import DeveloperProfile from "./pages/DeveloperProfile";
 import Posts from "./pages/Posts";
+import Register from "./pages/Register";
 
 import "./App.css";
 
@@ -40,6 +41,8 @@ function App() {
           path="/posts"
           element={<Posts />}
         />
+
+        <Route path="/register" element={<Register />} />
 
       </Routes>
 
