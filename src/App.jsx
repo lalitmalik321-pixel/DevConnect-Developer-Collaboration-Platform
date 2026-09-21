@@ -7,6 +7,7 @@ import Profile from "./pages/Profile";
 import DeveloperProfile from "./pages/DeveloperProfile";
 import Posts from "./pages/Posts";
 import Register from "./pages/Register";
+import Login from "./pages/Login";
 
 import "./App.css";
 
@@ -44,7 +45,11 @@ function App() {
 
         <Route path="/register" element={<Register />} />
 
+        <Route path="/login" element={<Login />} />
+
+
       </Routes>
+
 
     </BrowserRouter>
   );
