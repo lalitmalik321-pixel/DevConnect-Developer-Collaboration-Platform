@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 function Login() {
+    const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: ""
@@ -42,9 +44,9 @@ function Login() {
         throw new Error(data.message || "Login failed");
       }
 
-      setMessage(`Welcome, ${data.user.name}!`);
+      login(data.user);
 
-      console.log("Logged in user:", data.user);
+      setMessage(`Welcome, ${data.user.name}!`);
     } catch (error) {
       console.error(error);
       setError(error.message);
