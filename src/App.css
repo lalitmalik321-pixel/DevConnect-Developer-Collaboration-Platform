@@ -857,3 +857,364 @@ body {
   background: #e5e7eb;
   color: #374151;
 }
+.connect-btn {
+  margin-top: 20px;
+  padding: 12px 28px;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.connect-btn:hover {
+  background-color: #1d4ed8;
+}
+
+.connect-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.connection-info {
+  margin-top: 20px;
+  color: #6b7280;
+}
+
+.success-message {
+  margin-top: 18px;
+  color: #15803d;
+  font-weight: 600;
+}
+
+/* ============================= */
+/* CONNECTIONS PAGE              */
+/* ============================= */
+
+.connections-page {
+  min-height: calc(100vh - 70px);
+  padding: 60px 20px;
+  background-color: #f5f7fb;
+}
+
+.connections-page h1 {
+  text-align: center;
+  margin-bottom: 10px;
+  color: #1f2937;
+  font-size: 36px;
+}
+
+.connections-page .page-description {
+  text-align: center;
+  color: #6b7280;
+  margin-bottom: 40px;
+}
+
+/* Requests container */
+
+.requests-container {
+  max-width: 850px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Individual request */
+
+.connection-card {
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Avatar */
+
+.connection-avatar {
+  width: 60px;
+  height: 60px;
+  min-width: 60px;
+  border-radius: 50%;
+  background-color: #2563eb;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* Request information */
+
+.connection-card .connection-info {
+  flex: 1;
+}
+
+.connection-card .connection-info h3 {
+  margin: 0 0 6px;
+  color: #1f2937;
+  font-size: 20px;
+}
+
+.connection-card .connection-info p {
+  margin: 4px 0;
+  color: #6b7280;
+}
+
+/* Buttons */
+
+.connection-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.accept-btn,
+.reject-btn {
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.accept-btn {
+  background-color: #16a34a;
+  color: white;
+}
+
+.accept-btn:hover {
+  background-color: #15803d;
+}
+
+.reject-btn {
+  background-color: #ef4444;
+  color: white;
+}
+
+.reject-btn:hover {
+  background-color: #dc2626;
+}
+
+/* Empty state */
+
+.empty-state {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 50px 20px;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  text-align: center;
+  color: #6b7280;
+}
+
+/* Mobile */
+
+@media (max-width: 600px) {
+  .connections-page {
+    padding: 40px 15px;
+  }
+
+  .connections-page h1 {
+    font-size: 28px;
+  }
+
+  .connection-card {
+    flex-direction: column;
+    text-align: center;
+    padding: 25px 20px;
+  }
+
+  .connection-card .connection-info {
+    width: 100%;
+  }
+
+  .connection-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .accept-btn,
+  .reject-btn {
+    flex: 1;
+  }
+}
+
+.my-connections-section {
+  max-width: 850px;
+  margin: 60px auto 0;
+}
+
+.my-connections-section h2 {
+  color: #1f2937;
+  font-size: 28px;
+  margin-bottom: 25px;
+  text-align: center;
+}
+
+.connection-status {
+  background-color: #dcfce7;
+  color: #15803d;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .connection-status {
+    margin-top: 5px;
+  }
+
+  .my-connections-section h2 {
+    font-size: 24px;
+  }
+}
+
+/* ============================= */
+/* EDIT PROFILE                  */
+/* ============================= */
+
+.profile-email {
+  color: #4b5563;
+  margin: 8px 0;
+}
+
+.edit-profile-btn {
+  margin-top: 25px;
+  padding: 12px 28px;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.edit-profile-btn:hover {
+  background-color: #1d4ed8;
+}
+
+.profile-edit-form {
+  text-align: left;
+}
+
+.profile-edit-form h1 {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.profile-edit-form label {
+  display: block;
+  margin-top: 16px;
+  margin-bottom: 6px;
+  color: #374151;
+  font-weight: 600;
+}
+
+.profile-edit-form input,
+.profile-edit-form select,
+.profile-edit-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  background-color: white;
+  color: #1f2937;
+}
+
+.profile-edit-form input::placeholder,
+.profile-edit-form textarea::placeholder {
+  color: #9ca3af;
+  opacity: 1;
+}
+
+.profile-edit-form select {
+  color: #1f2937;
+}
+
+.profile-edit-form option {
+  color: #1f2937;
+  background-color: white;
+}
+
+.profile-edit-form input:focus,
+.profile-edit-form select:focus,
+.profile-edit-form textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.profile-edit-form input:disabled {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.profile-edit-form textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.profile-form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.save-profile-btn,
+.cancel-profile-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.save-profile-btn {
+  background-color: #2563eb;
+  color: white;
+}
+
+.save-profile-btn:hover {
+  background-color: #1d4ed8;
+}
+
+.save-profile-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.cancel-profile-btn {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+.cancel-profile-btn:hover {
+  background-color: #d1d5db;
+}
+
+@media (max-width: 600px) {
+  .profile-card {
+    margin: 20px 15px;
+    padding: 25px 20px;
+  }
+
+  .profile-form-actions {
+    flex-direction: column;
+  }
+}

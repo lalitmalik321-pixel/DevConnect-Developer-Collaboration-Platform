@@ -54,6 +54,12 @@ function Navbar() {
           Profile
         </Link>
 
+        {user && (
+          <Link to="/connections" onClick={closeMenu}>
+          Connections
+          </Link>
+        )}
+
         {user ? (
           <>
             <span className="nav-user">

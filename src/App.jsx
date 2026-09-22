@@ -8,6 +8,8 @@ import DeveloperProfile from "./pages/DeveloperProfile";
 import Posts from "./pages/Posts";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Connections from "./pages/Connections";
 
 import "./App.css";
 
@@ -36,8 +38,13 @@ function App() {
 
         <Route
           path="/profile"
-          element={<Profile />}
-        />
+          element={
+            <ProtectedRoute>
+            <Profile />
+            </ProtectedRoute>
+          }
+          />
+
         <Route
           path="/posts"
           element={<Posts />}
@@ -46,6 +53,15 @@ function App() {
         <Route path="/register" element={<Register />} />
 
         <Route path="/login" element={<Login />} />
+
+        <Route
+          path="/connections"
+          element={
+            <ProtectedRoute>
+            <Connections />
+            </ProtectedRoute>
+          }
+        />
 
 
       </Routes>

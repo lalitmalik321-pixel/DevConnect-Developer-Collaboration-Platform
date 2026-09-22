@@ -67,6 +67,7 @@ app.get("/api/developers/:id", (req, res) => {
   const sql = `
     SELECT
       d.id,
+      d.user_id,
       d.name,
       d.role,
       d.location,
@@ -95,6 +96,7 @@ app.get("/api/developers/:id", (req, res) => {
 
     const developer = {
       id: results[0].id,
+      user_id: results[0].user_id,
       name: results[0].name,
       role: results[0].role,
       location: results[0].location,
@@ -367,38 +369,75 @@ app.post("/api/register", async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const sql = `
-      INSERT INTO users (name, email, password, role)
+    const userRole = role || "Frontend Developer";
+
+    const insertUserSql = `
+      INSERT INTO users
+      (name, email, password, role)
       VALUES (?, ?, ?, ?)
     `;
 
-    const values = [
-      name,
-      email,
+    const userValues = [
+      name.trim(),
+      email.trim(),
       hashedPassword,
-      role || "Frontend Developer"
+      userRole
     ];
 
-    db.query(sql, values, (error, result) => {
-      if (error) {
-        console.error(error);
+    db.query(
+      insertUserSql,
+      userValues,
+      (userError, userResult) => {
+        if (userError) {
+          console.error(userError);
 
-        if (error.code === "ER_DUP_ENTRY") {
-          return res.status(409).json({
-            message: "Email already registered"
+          if (userError.code === "ER_DUP_ENTRY") {
+            return res.status(409).json({
+              message: "Email already registered"
+            });
+          }
+
+          return res.status(500).json({
+            message: "Failed to register user"
           });
         }
 
-        return res.status(500).json({
-          message: "Failed to register user"
-        });
-      }
+        const userId = userResult.insertId;
 
-      res.status(201).json({
-        message: "User registered successfully",
-        userId: result.insertId
-      });
-    });
+        const insertDeveloperSql = `
+          INSERT INTO developers
+          (user_id, name, role, location)
+          VALUES (?, ?, ?, ?)
+        `;
+
+        const developerValues = [
+          userId,
+          name.trim(),
+          userRole,
+          "India"
+        ];
+
+        db.query(
+          insertDeveloperSql,
+          developerValues,
+          (developerError) => {
+            if (developerError) {
+              console.error(developerError);
+
+              return res.status(500).json({
+                message:
+                  "User registered but developer profile could not be created"
+              });
+            }
+
+            res.status(201).json({
+              message: "User registered successfully",
+              userId: userId
+            });
+          }
+        );
+      }
+    );
   } catch (error) {
     console.error(error);
 
@@ -475,75 +514,6 @@ res.json({
 });
     });
   });
-
-app.get("/api/profile", authenticateToken, (req, res) => {
-  const userId = req.user.id;
-
-  const sql = `
-    SELECT id, name, email, role, created_at
-    FROM users
-    WHERE id = ?
-  `;
-
-  db.query(sql, [userId], (error, results) => {
-    if (error) {
-      console.error(error);
-      return res.status(500).json({
-        message: "Failed to fetch profile"
-      });
-    }
-
-    if (results.length === 0) {
-      return res.status(404).json({
-        message: "User not found"
-      });
-    }
-
-    res.json(results[0]);
-  });
-});
-
-app.put("/api/profile", authenticateToken, (req, res) => {
-  const userId = req.user.id;
-  const { name, role } = req.body;
-
-  if (!name || !name.trim()) {
-    return res.status(400).json({
-      message: "Name is required"
-    });
-  }
-
-  if (!role || !role.trim()) {
-    return res.status(400).json({
-      message: "Role is required"
-    });
-  }
-
-  const sql = `
-    UPDATE users
-    SET name = ?, role = ?
-    WHERE id = ?
-  `;
-
-  db.query(
-    sql,
-    [name.trim(), role.trim(), userId],
-    (error) => {
-      if (error) {
-        console.error(error);
-        return res.status(500).json({
-          message: "Failed to update profile"
-        });
-      }
-
-      res.json({
-        message: "Profile updated successfully",
-        name: name.trim(),
-        role: role.trim()
-      });
-    }
-  );
-});
 
 app.post("/api/posts/:id/like", authenticateToken, (req, res) => {
   const postId = req.params.id;
@@ -795,6 +765,384 @@ app.get("/api/posts/:id/comments", (req, res) => {
     res.json(results);
   });
 });
+
+app.post(
+  "/api/developers/:id/connect",
+  authenticateToken,
+  (req, res) => {
+    const developerId = Number(req.params.id);
+    const requesterId = req.user.id;
+
+    const developerSql = `
+      SELECT user_id
+      FROM developers
+      WHERE id = ?
+    `;
+
+    db.query(
+      developerSql,
+      [developerId],
+      (developerError, developerResults) => {
+        if (developerError) {
+          console.error(developerError);
+
+          return res.status(500).json({
+            message: "Failed to find developer"
+          });
+        }
+
+        if (developerResults.length === 0) {
+          return res.status(404).json({
+            message: "Developer not found"
+          });
+        }
+
+        const receiverId = developerResults[0].user_id;
+
+        if (!receiverId) {
+          return res.status(400).json({
+            message:
+              "This developer does not have a connected user account"
+          });
+        }
+
+        if (requesterId === receiverId) {
+          return res.status(400).json({
+            message: "You cannot connect with yourself"
+          });
+        }
+
+        const checkSql = `
+          SELECT id, status
+          FROM connections
+          WHERE
+            (requester_id = ? AND receiver_id = ?)
+            OR
+            (requester_id = ? AND receiver_id = ?)
+        `;
+
+        db.query(
+          checkSql,
+          [
+            requesterId,
+            receiverId,
+            receiverId,
+            requesterId
+          ],
+          (checkError, checkResults) => {
+            if (checkError) {
+              console.error(checkError);
+
+              return res.status(500).json({
+                message: "Failed to check connection"
+              });
+            }
+
+            if (checkResults.length > 0) {
+              return res.status(409).json({
+                message: "Connection already exists"
+              });
+            }
+
+            const insertSql = `
+              INSERT INTO connections
+              (requester_id, receiver_id)
+              VALUES (?, ?)
+            `;
+
+            db.query(
+              insertSql,
+              [requesterId, receiverId],
+              (insertError, result) => {
+                if (insertError) {
+                  console.error(insertError);
+
+                  return res.status(500).json({
+                    message:
+                      "Failed to send connection request"
+                  });
+                }
+
+                res.status(201).json({
+                  message: "Connection request sent",
+                  connectionId: result.insertId
+                });
+              }
+            );
+          }
+        );
+      }
+    );
+  }
+);
+
+app.get(
+  "/api/connections/requests",
+  authenticateToken,
+  (req, res) => {
+    const userId = req.user.id;
+
+    const sql = `
+      SELECT
+        c.id,
+        c.status,
+        c.created_at,
+        u.id AS requester_id,
+        u.name AS requester_name,
+        u.email AS requester_email,
+        u.role AS requester_role
+      FROM connections c
+
+      JOIN users u
+        ON c.requester_id = u.id
+
+      WHERE c.receiver_id = ?
+        AND c.status = 'pending'
+
+      ORDER BY c.created_at DESC
+    `;
+
+    db.query(sql, [userId], (error, results) => {
+      if (error) {
+        console.error(error);
+
+        return res.status(500).json({
+          message: "Failed to fetch connection requests"
+        });
+      }
+
+      res.json(results);
+    });
+  }
+);
+
+app.put(
+  "/api/connections/:id",
+  authenticateToken,
+  (req, res) => {
+    const connectionId = Number(req.params.id);
+    const { status } = req.body;
+    const userId = req.user.id;
+
+    if (!["accepted", "rejected"].includes(status)) {
+      return res.status(400).json({
+        message: "Invalid connection status"
+      });
+    }
+
+    const sql = `
+      UPDATE connections
+      SET status = ?
+      WHERE id = ?
+        AND receiver_id = ?
+        AND status = 'pending'
+    `;
+
+    db.query(
+      sql,
+      [status, connectionId, userId],
+      (error, result) => {
+        if (error) {
+          console.error(error);
+
+          return res.status(500).json({
+            message: "Failed to update connection"
+          });
+        }
+
+        if (result.affectedRows === 0) {
+          return res.status(404).json({
+            message: "Connection request not found"
+          });
+        }
+
+        res.json({
+          message:
+            status === "accepted"
+              ? "Connection accepted"
+              : "Connection rejected"
+        });
+      }
+    );
+  }
+);
+
+app.get(
+  "/api/connections",
+  authenticateToken,
+  (req, res) => {
+    const userId = req.user.id;
+
+    const sql = `
+      SELECT
+        c.id,
+        c.status,
+        c.created_at,
+
+        CASE
+          WHEN c.requester_id = ? THEN u2.id
+          ELSE u1.id
+        END AS user_id,
+
+        CASE
+          WHEN c.requester_id = ? THEN u2.name
+          ELSE u1.name
+        END AS name,
+
+        CASE
+          WHEN c.requester_id = ? THEN u2.email
+          ELSE u1.email
+        END AS email,
+
+        CASE
+          WHEN c.requester_id = ? THEN u2.role
+          ELSE u1.role
+        END AS role
+
+      FROM connections c
+
+      JOIN users u1
+        ON c.requester_id = u1.id
+
+      JOIN users u2
+        ON c.receiver_id = u2.id
+
+      WHERE
+        (c.requester_id = ? OR c.receiver_id = ?)
+        AND c.status = 'accepted'
+
+      ORDER BY c.created_at DESC
+    `;
+
+    db.query(
+      sql,
+      [
+        userId,
+        userId,
+        userId,
+        userId,
+        userId,
+        userId
+      ],
+      (error, results) => {
+        if (error) {
+          console.error(error);
+
+          return res.status(500).json({
+            message: "Failed to fetch connections"
+          });
+        }
+
+        res.json(results);
+      }
+    );
+  }
+);
+
+app.get(
+  "/api/profile",
+  authenticateToken,
+  (req, res) => {
+    const userId = req.user.id;
+
+    const sql = `
+      SELECT
+        id,
+        name,
+        email,
+        role,
+        location,
+        bio,
+        skills,
+        created_at
+      FROM users
+      WHERE id = ?
+    `;
+
+    db.query(sql, [userId], (error, results) => {
+      if (error) {
+        console.error(error);
+
+        return res.status(500).json({
+          message: "Failed to fetch profile"
+        });
+      }
+
+      if (results.length === 0) {
+        return res.status(404).json({
+          message: "User not found"
+        });
+      }
+
+      res.json(results[0]);
+    });
+  }
+);
+app.put(
+  "/api/profile",
+  authenticateToken,
+  (req, res) => {
+    const userId = req.user.id;
+
+    const {
+      name,
+      role,
+      location,
+      bio,
+      skills
+    } = req.body;
+
+    if (!name || !role) {
+      return res.status(400).json({
+        message: "Name and role are required"
+      });
+    }
+
+    const sql = `
+      UPDATE users
+      SET
+        name = ?,
+        role = ?,
+        location = ?,
+        bio = ?,
+        skills = ?
+      WHERE id = ?
+    `;
+
+    const values = [
+      name.trim(),
+      role,
+      location || "",
+      bio || "",
+      skills || "",
+      userId
+    ];
+
+    db.query(
+      sql,
+      values,
+      (error, result) => {
+        if (error) {
+          console.error(error);
+
+          return res.status(500).json({
+            message: "Failed to update profile"
+          });
+        }
+
+        if (result.affectedRows === 0) {
+          return res.status(404).json({
+            message: "User not found"
+          });
+        }
+
+        res.json({
+          message: "Profile updated successfully"
+        });
+      }
+    );
+  }
+);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
