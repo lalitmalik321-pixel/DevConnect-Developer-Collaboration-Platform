@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
 function CreatePost({ onAddPost }) {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
 
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,19 +25,18 @@ function CreatePost({ onAddPost }) {
 
     try {
       const response = await fetch(
-        "http://localhost:5001/api/posts",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            author: user.name,
-            role: user.role,
-            content: content
-          })
-        }
-      );
+  "http://localhost:5001/api/posts",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      content: content
+    })
+  }
+);
 
       const data = await response.json();
 

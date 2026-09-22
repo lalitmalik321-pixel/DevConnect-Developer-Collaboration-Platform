@@ -5,6 +5,7 @@ const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const db = require("./db");
 const jwt = require("jsonwebtoken");
+const authenticateToken = require("./authMiddleware");
 
 
 const app = express();
@@ -108,9 +109,19 @@ app.get("/api/developers/:id", (req, res) => {
 
 app.get("/api/posts", (req, res) => {
   const sql = `
-    SELECT *
-    FROM posts
-    ORDER BY created_at DESC
+    SELECT
+      p.id,
+      p.user_id,
+      p.content,
+      p.likes,
+      p.comments,
+      p.created_at,
+      u.name AS author,
+      u.role
+    FROM posts p
+    LEFT JOIN users u
+      ON p.user_id = u.id
+    ORDER BY p.created_at DESC
   `;
 
   db.query(sql, (error, results) => {
@@ -126,8 +137,135 @@ app.get("/api/posts", (req, res) => {
   });
 });
 
-app.post("/api/posts", (req, res) => {
-  const { author, role, content } = req.body;
+app.post(
+  "/api/posts",
+  authenticateToken,
+  (req, res) => {
+    const { content } = req.body;
+
+    if (!content || content.trim() === "") {
+      return res.status(400).json({
+        message: "Post content is required"
+      });
+    }
+
+    const userId = req.user.id;
+
+    const userSql = `
+      SELECT name, role
+      FROM users
+      WHERE id = ?
+    `;
+
+    db.query(userSql, [userId], (userError, userResults) => {
+      if (userError) {
+        console.error(userError);
+
+        return res.status(500).json({
+          message: "Failed to find user"
+        });
+      }
+
+      if (userResults.length === 0) {
+        return res.status(404).json({
+          message: "User not found"
+        });
+      }
+
+      const user = userResults[0];
+
+      const sql = `
+        INSERT INTO posts
+        (user_id, author, role, content)
+        VALUES (?, ?, ?, ?)
+      `;
+
+      const values = [
+        userId,
+        user.name,
+        user.role,
+        content.trim()
+      ];
+
+      db.query(sql, values, (error, result) => {
+        if (error) {
+          console.error(error);
+
+          return res.status(500).json({
+            message: "Failed to create post"
+          });
+        }
+
+        const newPost = {
+          id: result.insertId,
+          user_id: userId,
+          author: user.name,
+          role: user.role,
+          content: content.trim(),
+          likes: 0,
+          comments: 0
+        };
+
+        res.status(201).json(newPost);
+      });
+    });
+  }
+);
+
+app.delete("/api/posts/:id", authenticateToken, (req, res) => {
+  const postId = req.params.id;
+  const userId = req.user.id;
+
+  const checkSql = `
+    SELECT user_id
+    FROM posts
+    WHERE id = ?
+  `;
+
+  db.query(checkSql, [postId], (error, results) => {
+    if (error) {
+      console.error(error);
+      return res.status(500).json({
+        message: "Failed to check post"
+      });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({
+        message: "Post not found"
+      });
+    }
+
+    // Make sure the logged-in user owns the post
+    if (results[0].user_id !== userId) {
+      return res.status(403).json({
+        message: "You can only delete your own posts"
+      });
+    }
+
+    const deleteSql = `
+      DELETE FROM posts
+      WHERE id = ?
+    `;
+
+    db.query(deleteSql, [postId], (deleteError) => {
+      if (deleteError) {
+        console.error(deleteError);
+        return res.status(500).json({
+          message: "Failed to delete post"
+        });
+      }
+
+      res.json({
+        message: "Post deleted successfully"
+      });
+    });
+  });
+});
+app.put("/api/posts/:id", authenticateToken, (req, res) => {
+  const postId = req.params.id;
+  const userId = req.user.id;
+  const { content } = req.body;
 
   if (!content || content.trim() === "") {
     return res.status(400).json({
@@ -135,36 +273,55 @@ app.post("/api/posts", (req, res) => {
     });
   }
 
-  const sql = `
-    INSERT INTO posts (author, role, content)
-    VALUES (?, ?, ?)
+  const checkSql = `
+    SELECT user_id
+    FROM posts
+    WHERE id = ?
   `;
 
-  const values = [
-    author || "Lalit Singh Malik",
-    role || "Frontend Developer",
-    content.trim()
-  ];
-
-  db.query(sql, values, (error, result) => {
+  db.query(checkSql, [postId], (error, results) => {
     if (error) {
       console.error(error);
-
       return res.status(500).json({
-        message: "Failed to create post"
+        message: "Failed to check post"
       });
     }
 
-    const newPost = {
-      id: result.insertId,
-      author: values[0],
-      role: values[1],
-      content: values[2],
-      likes: 0,
-      comments: 0
-    };
+    if (results.length === 0) {
+      return res.status(404).json({
+        message: "Post not found"
+      });
+    }
 
-    res.status(201).json(newPost);
+    if (results[0].user_id !== userId) {
+      return res.status(403).json({
+        message: "You can only edit your own posts"
+      });
+    }
+
+    const updateSql = `
+      UPDATE posts
+      SET content = ?
+      WHERE id = ?
+    `;
+
+    db.query(
+      updateSql,
+      [content.trim(), postId],
+      (updateError) => {
+        if (updateError) {
+          console.error(updateError);
+          return res.status(500).json({
+            message: "Failed to update post"
+          });
+        }
+
+        res.json({
+          message: "Post updated successfully",
+          content: content.trim()
+        });
+      }
+    );
   });
 });
 

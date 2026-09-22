@@ -35,6 +35,12 @@ function Posts() {
     ]);
   };
 
+  const handleDelete = (postId) => {
+  setPosts((currentPosts) =>
+    currentPosts.filter((post) => post.id !== postId)
+  );
+};
+
   if (loading) {
     return (
       <div className="posts-page">
@@ -68,6 +74,7 @@ function Posts() {
           <PostCard
             key={post.id}
             post={post}
+            onDelete={handleDelete}
           />
         ))}
       </div>
