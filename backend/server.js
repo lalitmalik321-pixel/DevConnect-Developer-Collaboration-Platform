@@ -61,6 +61,42 @@ app.get("/api/developers", (req, res) => {
   });
 });
 
+app.get(
+  "/api/developers/user/:userId",
+  (req, res) => {
+    const userId = Number(req.params.userId);
+
+    const sql = `
+      SELECT
+        d.id,
+        d.user_id,
+        d.name,
+        d.role,
+        d.location
+      FROM developers d
+      WHERE d.user_id = ?
+    `;
+
+    db.query(sql, [userId], (error, results) => {
+      if (error) {
+        console.error(error);
+
+        return res.status(500).json({
+          message: "Failed to load developer"
+        });
+      }
+
+      if (results.length === 0) {
+        return res.status(404).json({
+          message: "Developer not found"
+        });
+      }
+
+      res.json(results[0]);
+    });
+  }
+);
+
 app.get("/api/developers/:id", (req, res) => {
   const developerId = req.params.id;
 
@@ -1421,6 +1457,136 @@ app.put(
             );
           }
         );
+      }
+    );
+  }
+);
+
+app.post(
+  "/api/messages",
+  authenticateToken,
+  (req, res) => {
+    const senderId = req.user.id;
+    const { receiverId, content } = req.body;
+
+    if (!receiverId || !content || !content.trim()) {
+      return res.status(400).json({
+        message: "Receiver and message content are required"
+      });
+    }
+
+    const sql = `
+      SELECT id
+      FROM connections
+      WHERE status = 'accepted'
+      AND (
+        (requester_id = ? AND receiver_id = ?)
+        OR
+        (requester_id = ? AND receiver_id = ?)
+      )
+      LIMIT 1
+    `;
+
+    db.query(
+      sql,
+      [
+        senderId,
+        receiverId,
+        receiverId,
+        senderId
+      ],
+      (error, results) => {
+        if (error) {
+          console.error(error);
+
+          return res.status(500).json({
+            message: "Failed to check connection"
+          });
+        }
+
+        if (results.length === 0) {
+          return res.status(403).json({
+            message:
+              "You can only message connected developers"
+          });
+        }
+
+        const insertSql = `
+          INSERT INTO messages
+          (sender_id, receiver_id, content)
+          VALUES (?, ?, ?)
+        `;
+
+        db.query(
+          insertSql,
+          [
+            senderId,
+            receiverId,
+            content.trim()
+          ],
+          (insertError, insertResult) => {
+            if (insertError) {
+              console.error(insertError);
+
+              return res.status(500).json({
+                message: "Failed to send message"
+              });
+            }
+
+            res.status(201).json({
+              message: "Message sent",
+              id: insertResult.insertId
+            });
+          }
+        );
+      }
+    );
+  }
+);
+
+app.get(
+  "/api/messages/:userId",
+  authenticateToken,
+  (req, res) => {
+    const currentUserId = req.user.id;
+    const otherUserId = Number(req.params.userId);
+
+    const sql = `
+      SELECT
+        m.id,
+        m.sender_id,
+        m.receiver_id,
+        m.content,
+        m.created_at,
+        u.name AS sender_name
+      FROM messages m
+      JOIN users u
+        ON u.id = m.sender_id
+      WHERE
+        (m.sender_id = ? AND m.receiver_id = ?)
+        OR
+        (m.sender_id = ? AND m.receiver_id = ?)
+      ORDER BY m.created_at ASC
+    `;
+
+    db.query(
+      sql,
+      [
+        currentUserId,
+        otherUserId,
+        otherUserId,
+        currentUserId
+      ],
+      (error, results) => {
+        if (error) {
+          console.error(error);
+
+          return res.status(500).json({
+            message: "Failed to load messages"
+          });
+        }
+
+        res.json(results);
       }
     );
   }

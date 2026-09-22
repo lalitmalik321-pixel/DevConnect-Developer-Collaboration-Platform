@@ -214,13 +214,24 @@ function DeveloperProfile() {
               )}
 
               {connectionStatus === "accepted" && (
-                <button
-                  className="connect-btn connected"
-                  disabled
-                >
-                  Connected
-                </button>
-              )}
+  <>
+    <button
+      className="connect-btn connected"
+      disabled
+    >
+      Connected
+    </button>
+
+    <button
+      className="message-btn"
+      onClick={() =>
+        window.location.href = `/messages/${developer.user_id}`
+      }
+    >
+      Message
+    </button>
+  </>
+)}
 
             </div>
           )}

@@ -10,6 +10,7 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Connections from "./pages/Connections";
+import Messages from "./pages/Messages";
 
 import "./App.css";
 
@@ -61,6 +62,11 @@ function App() {
             <Connections />
             </ProtectedRoute>
           }
+        />
+
+        <Route
+          path="/messages/:userId"
+          element={<Messages />}
         />
 
 
