@@ -1078,6 +1078,7 @@ app.get(
     });
   }
 );
+
 app.put(
   "/api/profile",
   authenticateToken,
@@ -1098,7 +1099,16 @@ app.put(
       });
     }
 
-    const sql = `
+    // Convert skills string into an array
+    const skillsArray = skills
+      ? skills
+          .split(",")
+          .map((skill) => skill.trim())
+          .filter((skill) => skill !== "")
+      : [];
+
+    // 1. Update users table
+    const updateUserSql = `
       UPDATE users
       SET
         name = ?,
@@ -1109,36 +1119,217 @@ app.put(
       WHERE id = ?
     `;
 
-    const values = [
+    const userValues = [
       name.trim(),
       role,
       location || "",
       bio || "",
-      skills || "",
+      skillsArray.join(", "),
       userId
     ];
 
     db.query(
-      sql,
-      values,
-      (error, result) => {
-        if (error) {
-          console.error(error);
+      updateUserSql,
+      userValues,
+      (userError) => {
+        if (userError) {
+          console.error(userError);
 
           return res.status(500).json({
             message: "Failed to update profile"
           });
         }
 
-        if (result.affectedRows === 0) {
-          return res.status(404).json({
-            message: "User not found"
-          });
-        }
+        // 2. Check developer profile
+        const developerSql = `
+          SELECT id
+          FROM developers
+          WHERE user_id = ?
+        `;
 
-        res.json({
-          message: "Profile updated successfully"
-        });
+        db.query(
+          developerSql,
+          [userId],
+          (developerError, developerResults) => {
+            if (developerError) {
+              console.error(developerError);
+
+              return res.status(500).json({
+                message: "Failed to check developer profile"
+              });
+            }
+
+            // --------------------------------
+            // 3. Developer already exists
+            // --------------------------------
+            if (developerResults.length > 0) {
+              const developerId =
+                developerResults[0].id;
+
+              const updateDeveloperSql = `
+                UPDATE developers
+                SET
+                  name = ?,
+                  role = ?,
+                  location = ?
+                WHERE id = ?
+              `;
+
+              db.query(
+                updateDeveloperSql,
+                [
+                  name.trim(),
+                  role,
+                  location || "",
+                  developerId
+                ],
+                (updateError) => {
+                  if (updateError) {
+                    console.error(updateError);
+
+                    return res.status(500).json({
+                      message:
+                        "Failed to update developer profile"
+                    });
+                  }
+
+                  // Remove old skills
+                  const deleteSkillsSql = `
+                    DELETE FROM developer_skills
+                    WHERE developer_id = ?
+                  `;
+
+                  db.query(
+                    deleteSkillsSql,
+                    [developerId],
+                    (deleteError) => {
+                      if (deleteError) {
+                        console.error(deleteError);
+
+                        return res.status(500).json({
+                          message:
+                            "Failed to update skills"
+                        });
+                      }
+
+                      // If there are no skills, finish here
+                      if (skillsArray.length === 0) {
+                        return res.json({
+                          message:
+                            "Profile updated successfully"
+                        });
+                      }
+
+                      // Add new skills
+                      const skillValues = skillsArray.map(
+                        (skill) => [developerId, skill]
+                      );
+
+                      const insertSkillsSql = `
+                        INSERT INTO developer_skills
+                        (developer_id, skill)
+                        VALUES ?
+                      `;
+
+                      db.query(
+                        insertSkillsSql,
+                        [skillValues],
+                        (skillError) => {
+                          if (skillError) {
+                            console.error(skillError);
+
+                            return res.status(500).json({
+                              message:
+                                "Failed to save skills"
+                            });
+                          }
+
+                          return res.json({
+                            message:
+                              "Profile updated successfully"
+                          });
+                        }
+                      );
+                    }
+                  );
+                }
+              );
+
+              return;
+            }
+
+            // --------------------------------
+            // 4. Developer profile doesn't exist
+            // --------------------------------
+
+            const insertDeveloperSql = `
+              INSERT INTO developers
+              (user_id, name, role, location)
+              VALUES (?, ?, ?, ?)
+            `;
+
+            db.query(
+              insertDeveloperSql,
+              [
+                userId,
+                name.trim(),
+                role,
+                location || ""
+              ],
+              (insertError, result) => {
+                if (insertError) {
+                  console.error(insertError);
+
+                  return res.status(500).json({
+                    message:
+                      "Failed to create developer profile"
+                  });
+                }
+
+                const developerId =
+                  result.insertId;
+
+                // If there are no skills, finish here
+                if (skillsArray.length === 0) {
+                  return res.json({
+                    message:
+                      "Profile updated successfully"
+                  });
+                }
+
+                const skillValues = skillsArray.map(
+                  (skill) => [developerId, skill]
+                );
+
+                const insertSkillsSql = `
+                  INSERT INTO developer_skills
+                  (developer_id, skill)
+                  VALUES ?
+                `;
+
+                db.query(
+                  insertSkillsSql,
+                  [skillValues],
+                  (skillError) => {
+                    if (skillError) {
+                      console.error(skillError);
+
+                      return res.status(500).json({
+                        message:
+                          "Failed to save skills"
+                      });
+                    }
+
+                    return res.json({
+                      message:
+                        "Profile updated successfully"
+                    });
+                  }
+                );
+              }
+            );
+          }
+        );
       }
     );
   }

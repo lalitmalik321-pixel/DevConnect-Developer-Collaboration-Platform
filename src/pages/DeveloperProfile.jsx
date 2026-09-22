@@ -1,79 +1,39 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 
 function DeveloperProfile() {
   const { id } = useParams();
-  const { user, token } = useAuth();
 
   const [developer, setDeveloper] = useState(null);
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [connecting, setConnecting] = useState(false);
-  const [connectionMessage, setConnectionMessage] = useState("");
-  const [connectionError, setConnectionError] = useState("");
-
   useEffect(() => {
-    fetch(`http://localhost:5001/api/developers/${id}`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Developer not found");
-        }
-
-        return response.json();
-      })
-      .then((data) => {
-        setDeveloper(data);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error(error);
-        setError("Developer not found.");
-        setLoading(false);
-      });
-  }, [id]);
-
-  const handleConnect = async () => {
-    if (!user) {
-      setConnectionError("Please login to connect with developers.");
-      return;
-    }
-
-    setConnecting(true);
-    setConnectionMessage("");
-    setConnectionError("");
-
-    try {
-      const response = await fetch(
-        `http://localhost:5001/api/developers/${id}/connect`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message || "Failed to send connection request"
+    const loadDeveloper = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:5001/api/developers/${id}`
         );
-      }
 
-      setConnectionMessage(
-        "Connection request sent successfully!"
-      );
-    } catch (error) {
-      console.error(error);
-      setConnectionError(error.message);
-    } finally {
-      setConnecting(false);
-    }
-  };
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || "Developer not found"
+          );
+        }
+
+        setDeveloper(data);
+      } catch (error) {
+        console.error(error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDeveloper();
+  }, [id]);
 
   if (loading) {
     return (
@@ -91,17 +51,12 @@ function DeveloperProfile() {
     );
   }
 
-  const isOwnProfile =
-    developer.user_id &&
-    user &&
-    Number(developer.user_id) === Number(user.id);
-
   return (
     <div className="profile-page">
       <div className="profile-card">
 
         <div className="profile-avatar">
-          {developer.name.charAt(0)}
+          {developer.name.charAt(0).toUpperCase()}
         </div>
 
         <h1>{developer.name}</h1>
@@ -110,51 +65,31 @@ function DeveloperProfile() {
           {developer.role}
         </p>
 
+        {developer.email && (
+          <p className="profile-email">
+            📧 {developer.email}
+          </p>
+        )}
+
         <p className="profile-location">
-          📍 {developer.location}
+          📍 {developer.location || "India"}
         </p>
 
         <p className="profile-bio">
-          Hello! I am {developer.name}, a{" "}
-          {developer.role.toLowerCase()}. I enjoy building
-          projects and learning new technologies.
+          {developer.bio ||
+            "This developer has not added a bio yet."}
         </p>
 
         <div className="profile-skills">
-          {developer.skills.map((skill) => (
-            <span key={skill}>{skill}</span>
-          ))}
+          {developer.skills &&
+          developer.skills.length > 0 ? (
+            developer.skills.map((skill) => (
+              <span key={skill}>{skill}</span>
+            ))
+          ) : (
+            <p>No skills added yet.</p>
+          )}
         </div>
-
-        {user && !isOwnProfile && developer.user_id && (
-          <button
-            className="connect-btn"
-            onClick={handleConnect}
-            disabled={connecting}
-          >
-            {connecting
-              ? "Connecting..."
-              : "Connect"}
-          </button>
-        )}
-
-        {!user && (
-          <p className="connection-info">
-            Login to connect with this developer.
-          </p>
-        )}
-
-        {connectionMessage && (
-          <p className="success-message">
-            {connectionMessage}
-          </p>
-        )}
-
-        {connectionError && (
-          <p className="error">
-            {connectionError}
-          </p>
-        )}
 
       </div>
     </div>
