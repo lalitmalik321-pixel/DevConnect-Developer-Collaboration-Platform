@@ -1,15 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
 function PostCard({ post, onDelete }) {
   const { user, token } = useAuth();
 
   const [likes, setLikes] = useState(post.likes);
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(post.liked);
 
   const [showComments, setShowComments] = useState(false);
   const [comment, setComment] = useState("");
   const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
 
   const [deleting, setDeleting] = useState(false);
 
@@ -17,24 +18,106 @@ function PostCard({ post, onDelete }) {
   const [editContent, setEditContent] = useState(post.content);
   const [saving, setSaving] = useState(false);
 
-  const handleLike = () => {
-    if (liked) {
-      setLikes(likes - 1);
-      setLiked(false);
-    } else {
-      setLikes(likes + 1);
-      setLiked(true);
+  const handleLike = async () => {
+  if (!user) {
+    alert("Please login to like a post.");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `http://localhost:5001/api/posts/${post.id}/like`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to like post"
+      );
     }
-  };
 
-  const handleComment = (e) => {
-    e.preventDefault();
+    setLikes(data.likes);
+    setLiked(data.liked);
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
+  }
+};
 
-    if (comment.trim() === "") return;
+const loadComments = async () => {
+  setCommentsLoading(true);
 
-    setComments([...comments, comment]);
+  try {
+    const response = await fetch(
+      `http://localhost:5001/api/posts/${post.id}/comments`
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to load comments"
+      );
+    }
+
+    setComments(data);
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
+  } finally {
+    setCommentsLoading(false);
+  }
+};
+
+  const handleComment = async (e) => {
+  e.preventDefault();
+
+  if (!user) {
+    alert("Please login to comment.");
+    return;
+  }
+
+  if (comment.trim() === "") {
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `http://localhost:5001/api/posts/${post.id}/comments`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          content: comment
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to create comment"
+      );
+    }
+
+    setComments([...comments, data]);
     setComment("");
-  };
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
+  }
+};
 
   const handleDelete = async () => {
     const confirmed = window.confirm(
@@ -207,12 +290,18 @@ function PostCard({ post, onDelete }) {
         </button>
 
         <button
-          onClick={() =>
-            setShowComments(!showComments)
-          }
-        >
-          💬 {comments.length}
-        </button>
+  onClick={() => {
+    const willShow = !showComments;
+
+    setShowComments(willShow);
+
+    if (willShow) {
+      loadComments();
+    }
+  }}
+>
+  💬 {comments.length}
+</button>
 
       </div>
 
@@ -239,18 +328,22 @@ function PostCard({ post, onDelete }) {
 
           <div className="comments-list">
 
-            {comments.map((item, index) => (
-              <div
-                className="comment"
-                key={index}
-              >
-                <strong>
-                  {user?.name || "Developer"}
-                </strong>
+            {commentsLoading ? (
+  <p>Loading comments...</p>
+) : (
+  comments.map((item) => (
+    <div
+      className="comment"
+      key={item.id}
+    >
+      <strong>
+        {item.author}
+      </strong>
 
-                <p>{item}</p>
-              </div>
-            ))}
+      <p>{item.content}</p>
+    </div>
+  ))
+)}
 
           </div>
 

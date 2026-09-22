@@ -1,15 +1,22 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 import PostCard from "../components/PostCard";
 import CreatePost from "../components/CreatePost";
 
 function Posts() {
+  const { token } = useAuth();
+
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("http://localhost:5001/api/posts")
+    fetch("http://localhost:5001/api/posts", {
+  headers: {
+    Authorization: `Bearer ${token}`
+  }
+})
       .then((response) => {
         if (!response.ok) {
           throw new Error("Failed to fetch posts");
@@ -26,7 +33,7 @@ function Posts() {
         setError("Unable to load posts.");
         setLoading(false);
       });
-  }, []);
+  }, [token]);
 
   const handleAddPost = (newPost) => {
     setPosts((currentPosts) => [

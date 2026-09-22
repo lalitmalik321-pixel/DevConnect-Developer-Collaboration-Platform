@@ -107,24 +107,48 @@ app.get("/api/developers/:id", (req, res) => {
   });
 });
 
-app.get("/api/posts", (req, res) => {
+app.get("/api/posts", authenticateToken, (req, res) => {
+  const userId = req.user.id;
+
   const sql = `
     SELECT
+  p.id,
+  p.user_id,
+  p.content,
+  p.created_at,
+  u.name AS author,
+  u.role,
+  COUNT(DISTINCT pl.id) AS likes,
+  COUNT(DISTINCT c.id) AS comments,
+  MAX(
+    CASE
+      WHEN pl.user_id = ? THEN 1
+      ELSE 0
+    END
+  ) AS liked
+FROM posts p
+
+LEFT JOIN users u
+  ON p.user_id = u.id
+
+LEFT JOIN post_likes pl
+  ON p.id = pl.post_id
+
+LEFT JOIN comments c
+  ON p.id = c.post_id
+
+    GROUP BY
       p.id,
       p.user_id,
       p.content,
-      p.likes,
-      p.comments,
       p.created_at,
-      u.name AS author,
+      u.name,
       u.role
-    FROM posts p
-    LEFT JOIN users u
-      ON p.user_id = u.id
+
     ORDER BY p.created_at DESC
   `;
 
-  db.query(sql, (error, results) => {
+  db.query(sql, [userId], (error, results) => {
     if (error) {
       console.error(error);
 
@@ -133,7 +157,13 @@ app.get("/api/posts", (req, res) => {
       });
     }
 
-    res.json(results);
+    const posts = results.map((post) => ({
+      ...post,
+      likes: Number(post.likes),
+      liked: Boolean(post.liked)
+    }));
+
+    res.json(posts);
   });
 });
 
@@ -513,6 +543,257 @@ app.put("/api/profile", authenticateToken, (req, res) => {
       });
     }
   );
+});
+
+app.post("/api/posts/:id/like", authenticateToken, (req, res) => {
+  const postId = req.params.id;
+  const userId = req.user.id;
+
+  const checkPostSql = `
+    SELECT id
+    FROM posts
+    WHERE id = ?
+  `;
+
+  db.query(checkPostSql, [postId], (postError, postResults) => {
+    if (postError) {
+      console.error(postError);
+      return res.status(500).json({
+        message: "Failed to check post"
+      });
+    }
+
+    if (postResults.length === 0) {
+      return res.status(404).json({
+        message: "Post not found"
+      });
+    }
+
+    const checkLikeSql = `
+      SELECT id
+      FROM post_likes
+      WHERE post_id = ? AND user_id = ?
+    `;
+
+    db.query(
+      checkLikeSql,
+      [postId, userId],
+      (likeError, likeResults) => {
+        if (likeError) {
+          console.error(likeError);
+          return res.status(500).json({
+            message: "Failed to check like"
+          });
+        }
+
+        // User already liked the post → unlike it
+        if (likeResults.length > 0) {
+          const deleteLikeSql = `
+            DELETE FROM post_likes
+            WHERE post_id = ? AND user_id = ?
+          `;
+
+          db.query(
+            deleteLikeSql,
+            [postId, userId],
+            (deleteError) => {
+              if (deleteError) {
+                console.error(deleteError);
+                return res.status(500).json({
+                  message: "Failed to remove like"
+                });
+              }
+
+              const countSql = `
+                SELECT COUNT(*) AS likes
+                FROM post_likes
+                WHERE post_id = ?
+              `;
+
+              db.query(
+                countSql,
+                [postId],
+                (countError, countResults) => {
+                  if (countError) {
+                    console.error(countError);
+                    return res.status(500).json({
+                      message: "Failed to count likes"
+                    });
+                  }
+
+                  res.json({
+                    liked: false,
+                    likes: countResults[0].likes
+                  });
+                }
+              );
+            }
+          );
+
+          return;
+        }
+
+        // User has not liked the post → add like
+        const addLikeSql = `
+          INSERT INTO post_likes (post_id, user_id)
+          VALUES (?, ?)
+        `;
+
+        db.query(
+          addLikeSql,
+          [postId, userId],
+          (insertError) => {
+            if (insertError) {
+              console.error(insertError);
+              return res.status(500).json({
+                message: "Failed to like post"
+              });
+            }
+
+            const countSql = `
+              SELECT COUNT(*) AS likes
+              FROM post_likes
+              WHERE post_id = ?
+            `;
+
+            db.query(
+              countSql,
+              [postId],
+              (countError, countResults) => {
+                if (countError) {
+                  console.error(countError);
+                  return res.status(500).json({
+                    message: "Failed to count likes"
+                  });
+                }
+
+                res.json({
+                  liked: true,
+                  likes: countResults[0].likes
+                });
+              }
+            );
+          }
+        );
+      }
+    );
+  });
+});
+
+app.post(
+  "/api/posts/:id/comments",
+  authenticateToken,
+  (req, res) => {
+    const postId = req.params.id;
+    const userId = req.user.id;
+    const { content } = req.body;
+
+    if (!content || content.trim() === "") {
+      return res.status(400).json({
+        message: "Comment cannot be empty"
+      });
+    }
+
+    const postSql = `
+      SELECT id
+      FROM posts
+      WHERE id = ?
+    `;
+
+    db.query(postSql, [postId], (postError, postResults) => {
+      if (postError) {
+        console.error(postError);
+
+        return res.status(500).json({
+          message: "Failed to check post"
+        });
+      }
+
+      if (postResults.length === 0) {
+        return res.status(404).json({
+          message: "Post not found"
+        });
+      }
+
+      const insertSql = `
+        INSERT INTO comments
+        (post_id, user_id, content)
+        VALUES (?, ?, ?)
+      `;
+
+      db.query(
+        insertSql,
+        [postId, userId, content.trim()],
+        (error, result) => {
+          if (error) {
+            console.error(error);
+
+            return res.status(500).json({
+              message: "Failed to create comment"
+            });
+          }
+
+          const userSql = `
+            SELECT name
+            FROM users
+            WHERE id = ?
+          `;
+
+          db.query(userSql, [userId], (userError, users) => {
+            if (userError) {
+              console.error(userError);
+
+              return res.status(500).json({
+                message: "Comment created but user could not be loaded"
+              });
+            }
+
+            res.status(201).json({
+              id: result.insertId,
+              post_id: Number(postId),
+              user_id: userId,
+              content: content.trim(),
+              author: users[0].name
+            });
+          });
+        }
+      );
+    });
+  }
+);
+
+app.get("/api/posts/:id/comments", (req, res) => {
+  const postId = req.params.id;
+
+  const sql = `
+    SELECT
+      c.id,
+      c.post_id,
+      c.user_id,
+      c.content,
+      c.created_at,
+      u.name AS author
+    FROM comments c
+
+    JOIN users u
+      ON c.user_id = u.id
+
+    WHERE c.post_id = ?
+
+    ORDER BY c.created_at ASC
+  `;
+
+  db.query(sql, [postId], (error, results) => {
+    if (error) {
+      console.error(error);
+
+      return res.status(500).json({
+        message: "Failed to fetch comments"
+      });
+    }
+
+    res.json(results);
+  });
 });
 
 app.listen(PORT, () => {
