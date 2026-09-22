@@ -1218,3 +1218,35 @@ body {
     flex-direction: column;
   }
 }
+.connection-section {
+  margin-top: 25px;
+}
+
+.connect-btn {
+  padding: 12px 28px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.connect-btn:hover {
+  background: #1d4ed8;
+}
+
+.connect-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.connect-btn.pending {
+  background: #6b7280;
+}
+
+.connect-btn.connected {
+  background: #16a34a;
+}

@@ -74,14 +74,23 @@ function Navbar() {
             </button>
           </>
         ) : (
-          <Link
-            to="/login"
-            className="login-btn"
-            onClick={closeMenu}
-          >
-            Login
-          </Link>
-        )}
+  <>
+    <Link
+      to="/login"
+      className="login-btn"
+      onClick={closeMenu}
+    >
+      Login
+    </Link>
+
+    <Link
+      to="/register"
+      onClick={closeMenu}
+    >
+      Register
+    </Link>
+  </>
+)}
       </div>
     </nav>
   );

@@ -766,6 +766,97 @@ app.get("/api/posts/:id/comments", (req, res) => {
   });
 });
 
+app.get(
+  "/api/developers/:id/connection-status",
+  authenticateToken,
+  (req, res) => {
+    const developerId = Number(req.params.id);
+    const currentUserId = req.user.id;
+
+    const developerSql = `
+      SELECT user_id
+      FROM developers
+      WHERE id = ?
+    `;
+
+    db.query(
+      developerSql,
+      [developerId],
+      (developerError, developerResults) => {
+        if (developerError) {
+          console.error(developerError);
+
+          return res.status(500).json({
+            message: "Failed to find developer"
+          });
+        }
+
+        if (developerResults.length === 0) {
+          return res.status(404).json({
+            message: "Developer not found"
+          });
+        }
+
+        const developerUserId =
+          developerResults[0].user_id;
+
+        if (!developerUserId) {
+          return res.json({
+            status: "none"
+          });
+        }
+
+        if (currentUserId === developerUserId) {
+          return res.json({
+            status: "self"
+          });
+        }
+
+        const connectionSql = `
+          SELECT status
+          FROM connections
+          WHERE
+            (requester_id = ? AND receiver_id = ?)
+            OR
+            (requester_id = ? AND receiver_id = ?)
+          ORDER BY id DESC
+          LIMIT 1
+        `;
+
+        db.query(
+          connectionSql,
+          [
+            currentUserId,
+            developerUserId,
+            developerUserId,
+            currentUserId
+          ],
+          (connectionError, connectionResults) => {
+            if (connectionError) {
+              console.error(connectionError);
+
+              return res.status(500).json({
+                message:
+                  "Failed to check connection status"
+              });
+            }
+
+            if (connectionResults.length === 0) {
+              return res.json({
+                status: "none"
+              });
+            }
+
+            res.json({
+              status: connectionResults[0].status
+            });
+          }
+        );
+      }
+    );
+  }
+);
+
 app.post(
   "/api/developers/:id/connect",
   authenticateToken,
