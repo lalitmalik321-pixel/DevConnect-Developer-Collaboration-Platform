@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Connections from "./pages/Connections";
 import Messages from "./pages/Messages";
+import MessagesInbox from "./pages/MessagesInbox";
 
 import "./App.css";
 
@@ -69,6 +70,10 @@ function App() {
           element={<Messages />}
         />
 
+        <Route
+          path="/messages"
+          element={<MessagesInbox />}
+        />
 
       </Routes>
 

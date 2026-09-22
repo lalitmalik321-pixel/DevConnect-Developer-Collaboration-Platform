@@ -50,6 +50,10 @@ function Navbar() {
           Feed
         </Link>
 
+        <Link to="/messages" onClick={closeMenu}>
+          Messages
+        </Link>
+
         <Link to="/profile" onClick={closeMenu}>
           Profile
         </Link>
@@ -74,22 +78,22 @@ function Navbar() {
             </button>
           </>
         ) : (
-  <>
-    <Link
-      to="/login"
-      className="login-btn"
-      onClick={closeMenu}
-    >
-      Login
-    </Link>
+          <>
+            <Link
+              to="/login"
+              className="login-btn"
+              onClick={closeMenu}
+            >
+              Login
+            </Link>
 
-    <Link
-      to="/register"
-      onClick={closeMenu}
-    >
-      Register
-    </Link>
-  </>
+            <Link
+              to="/register"
+              onClick={closeMenu}
+            >
+              Register
+            </Link>
+          </>
 )}
       </div>
     </nav>

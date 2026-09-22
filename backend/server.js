@@ -1592,6 +1592,66 @@ app.get(
   }
 );
 
+
+
+app.get(
+  "/api/messages",
+  authenticateToken,
+  (req, res) => {
+    const userId = req.user.id;
+
+    const sql = `
+      SELECT
+        u.id AS user_id,
+        u.name,
+        u.role,
+        m.content AS last_message,
+        m.created_at
+      FROM users u
+      JOIN messages m
+        ON (
+          (m.sender_id = u.id AND m.receiver_id = ?)
+          OR
+          (m.receiver_id = u.id AND m.sender_id = ?)
+        )
+      WHERE u.id != ?
+        AND m.id = (
+          SELECT m2.id
+          FROM messages m2
+          WHERE
+            (m2.sender_id = u.id AND m2.receiver_id = ?)
+            OR
+            (m2.receiver_id = u.id AND m2.sender_id = ?)
+          ORDER BY m2.created_at DESC
+          LIMIT 1
+        )
+      ORDER BY m.created_at DESC
+    `;
+
+    db.query(
+      sql,
+      [
+        userId,
+        userId,
+        userId,
+        userId,
+        userId
+      ],
+      (error, results) => {
+        if (error) {
+          console.error(error);
+
+          return res.status(500).json({
+            message: "Failed to load conversations"
+          });
+        }
+
+        res.json(results);
+      }
+    );
+  }
+);
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
