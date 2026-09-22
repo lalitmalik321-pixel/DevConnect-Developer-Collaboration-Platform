@@ -446,6 +446,75 @@ res.json({
     });
   });
 
+app.get("/api/profile", authenticateToken, (req, res) => {
+  const userId = req.user.id;
+
+  const sql = `
+    SELECT id, name, email, role, created_at
+    FROM users
+    WHERE id = ?
+  `;
+
+  db.query(sql, [userId], (error, results) => {
+    if (error) {
+      console.error(error);
+      return res.status(500).json({
+        message: "Failed to fetch profile"
+      });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    res.json(results[0]);
+  });
+});
+
+app.put("/api/profile", authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const { name, role } = req.body;
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({
+      message: "Name is required"
+    });
+  }
+
+  if (!role || !role.trim()) {
+    return res.status(400).json({
+      message: "Role is required"
+    });
+  }
+
+  const sql = `
+    UPDATE users
+    SET name = ?, role = ?
+    WHERE id = ?
+  `;
+
+  db.query(
+    sql,
+    [name.trim(), role.trim(), userId],
+    (error) => {
+      if (error) {
+        console.error(error);
+        return res.status(500).json({
+          message: "Failed to update profile"
+        });
+      }
+
+      res.json({
+        message: "Profile updated successfully",
+        name: name.trim(),
+        role: role.trim()
+      });
+    }
+  );
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

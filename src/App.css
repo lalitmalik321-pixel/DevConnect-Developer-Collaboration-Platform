@@ -219,6 +219,85 @@ body {
   text-align: center;
 }
 
+.edit-profile-btn {
+  margin-top: 25px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.edit-profile-btn:hover {
+  background: #1d4ed8;
+}
+
+.edit-profile-form {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.edit-profile-form h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.edit-profile-form label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.edit-profile-form input,
+.edit-profile-form select {
+  width: 100%;
+  padding: 11px;
+  margin-bottom: 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  box-sizing: border-box;
+  font-size: 15px;
+}
+
+.edit-profile-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.edit-profile-actions button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.edit-profile-actions button:first-child {
+  background: #2563eb;
+  color: white;
+}
+
+.edit-profile-actions button:last-child {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.edit-profile-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.success-message {
+  margin-top: 15px;
+  color: #16a34a;
+  font-weight: 600;
+}
+
 .profile-avatar {
   width: 100px;
   height: 100px;
