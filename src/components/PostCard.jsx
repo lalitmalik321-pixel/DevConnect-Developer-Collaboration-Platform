@@ -4,8 +4,8 @@ import { useAuth } from "../context/AuthContext";
 function PostCard({ post, onDelete }) {
   const { user, token } = useAuth();
 
-  const [likes, setLikes] = useState(post.likes);
-  const [liked, setLiked] = useState(post.liked);
+  const [likes, setLikes] = useState(Number(post.likes) || 0);
+  const [liked, setLiked] = useState(Boolean(Number(post.liked)));
 
   const [showComments, setShowComments] = useState(false);
   const [comment, setComment] = useState("");
